@@ -7,10 +7,13 @@ int yylex();
 
 /* Importăm variabilele și funcțiile din partea de C (Persoana 1) [cite: 144, 165] */
 extern int currentPlayer, nrofTurns, state;
+extern char *cardNames[];
 extern void start_action();
 extern void extract_card();
 extern int playerHasCard(int cardType);
 extern void deleteCard(int cardType);
+extern int playerHasTwoCards(int cardType);
+extern void futureFile();
 
 /* Definirea indexului pentru fiecare tip de carte conform cerintei [cite: 145] */
 #define C_DEFUSE 1
@@ -45,15 +48,34 @@ comanda_start:
     ;
 
 actiune_joc:
-    PLAY carte_speciala {
-        if (state == 1) { // WAIT_COMMAND [cite: 144]
-            /* Aici se apeleaza logica de joc pentru fiecare carte [cite: 196] */
-            printf("Jucatorul %d a jucat o carte.\n", currentPlayer);
+    PLAY carte_speciala 
+    | PLAY tip_pisica {
+        /* Permitem PLAY CATTERMELON, dar de obicei pisicile nu fac nimic singure */
+        if (playerHasCard($2)) {
+            printf("Chatbot: Ai jucat %s, dar nu are niciun efect singura. Ai nevoie de o pereche!\n", cardNames[$2]);
         }
     }
     | EXTRACT {
         if (state == 1) extract_card(); // Trage o carte si verifica daca e bomba [cite: 52, 61]
     }
+    | PAIR tip_pisica {
+        /* Verificăm dacă are cel puțin 2 cărți de același fel */
+        if (playerHasTwoCards($2)) { 
+            deleteCard($2);
+            deleteCard($2);
+            printf("Chatbot: Ai jucat o PERECHE de %s! Poti fura o carte.\n", cardNames[$2]);
+        } else {
+            printf("Chatbot: Nu ai doua carti de acest fel pentru a forma o pereche!\n");
+        }
+    }
+    ;
+
+tip_pisica:
+    TACO_CAT { $$ = 7; }
+    | POTATO_CAT { $$ = 8; }
+    | RAINBOW_CAT { $$ = 9; }
+    | BEARD_CAT { $$ = 10; }
+    | CATTERMELON { $$ = 11; }
     ;
 
 carte_speciala:
@@ -65,6 +87,19 @@ carte_speciala:
             printf("Atac! Jucatorul %d are 2 ture.\n", currentPlayer);
         }
     }
+    | SKIP {
+        if (playerHasCard(3)) { 
+            deleteCard(3); 
+            nrofTurns--; 
+            if (nrofTurns <= 0) {
+                currentPlayer = (currentPlayer == 1) ? 2 : 1;
+                nrofTurns = 1;
+            }
+            printf("Chatbot: Ai folosit SKIP. Randul tau s-a terminat.\n");
+        } else {
+            printf("Chatbot: Nu ai cartea SKIP in mana!\n");
+        }
+    }
     | SHUFFLE {
         if (playerHasCard(C_SHUFFLE)) {
             deleteCard(C_SHUFFLE);
@@ -74,15 +109,33 @@ carte_speciala:
     | SEE_FUTURE {
         if (playerHasCard(C_SEE_FUTURE)) {
             deleteCard(C_SEE_FUTURE);
-            state = 2; // WAIT_DONE [cite: 144]
-            printf("Vizualizeaza viitorul in future.txt. Scrie DONE cand termini.\n"); // [cite: 107]
+            state = 2; // Trece în starea WAIT_DONE [cite: 144]
+            futureFile(); // <--- ACEASTA LINIE GENEREAZĂ FIȘIERUL!
+            printf("Player %d a folosit SEE FUTURE.\n", currentPlayer);
+        } else {
+            printf("Nu ai aceasta carte!\n");
+        }
+    }
+    | FAVOR {
+        if (playerHasCard(4)) {
+            deleteCard(4);
+            state = 3; // WAIT_GIVE (trebuie definit in enum)
+            printf("Chatbot: Player %d, alege ce carte sa dai (GIVE <nume_carte>).\n", (currentPlayer == 1) ? 2 : 1);
         }
     }
     ;
 
 gestionare_bomba:
     DONE {
-        if (state == 2) state = 1; // Revine la comenzi dupa See Future [cite: 54, 109]
+       if (state == 2) { // Dacă suntem în starea WAIT_DONE 
+            state = 1;    // Revenim la WAIT_COMMAND 
+            
+            /* Putem apela o funcție pentru a goli sau șterge fișierul  */
+            remove("future.txt"); 
+            
+            printf("Chatbot: Am inteles. Acum poti continua jocul (PLAY sau EXTRACT).\n");
+            printf("Player %d, look at your cards in file pl%d.txt and give a command\n", currentPlayer, currentPlayer);
+        }
     }
     | CHOOSE NUMBER {
         if (state == 4) { // WAIT_PLACEMENT (dupa Defuse) [cite: 144, 226]

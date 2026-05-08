@@ -1,0 +1,9 @@
+Cartile tale (Player 1):
+- DEFUSE
+- TACO_CAT
+- BEARD_CAT
+- SHUFFLE
+- RAINBOW_CAT
+- BEARD_CAT
+- RAINBOW_CAT
+- SKIP

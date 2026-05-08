@@ -6,14 +6,14 @@
 #include <time.h>
 
 /* --- PROTOTIPURI --- */
-/* Acestea trebuie declarate aici pentru a fi vizibile in tot fisierul */
 void start_action();
 void extract_card();
 int playerHasCard(int cardType);
 void deleteCard(int cardType);
+void writeCardsToFile();
+void futureFile();
 
 /* --- VARIABILE GLOBALE --- */
-/* Definim stările și structurile conform documentației [cite: 143, 144] */
 enum states { START_S, WAIT_COMMAND, WAIT_DONE, WAIT_GIVE, WAIT_PLACEMENT };
 enum states state = START_S; 
 
@@ -22,6 +22,8 @@ int player1[30], player2[30];
 int deckSize = 0, p1Size = 0, p2Size = 0; 
 int currentPlayer = 1; 
 int nrofTurns = 1;
+
+/* Numele cartilor pentru afisarea in fisiere [cite: 147, 160] */
 char *cardNames[] = {"EXPLODE", "DEFUSE", "ATTACK", "SKIP", "FAVOR", "SHUFFLE", "SEE_FUTURE", "TACO_CAT", "POTATO_CAT", "RAINBOW_CAT", "BEARD_CAT", "CATTERMELON"};
 %}
 
@@ -64,7 +66,6 @@ int yywrap() {
 }
 
 /* --- IMPLEMENTARE FUNCTII C --- */
-/* Toate functiile se scriu in ultima sectiune a fisierului Lex */
 
 int playerHasCard(int cardType) {
     int *hand = (currentPlayer == 1) ? player1 : player2;
@@ -85,19 +86,47 @@ void deleteCard(int cardType) {
             break;
         }
     }
+    /* Actualizam fisierele dupa ce o carte a fost jucata [cite: 190] */
+    writeCardsToFile();
+}
+
+int playerHasTwoCards(int cardType) {
+    int count = 0;
+    int *hand = (currentPlayer == 1) ? player1 : player2;
+    int size = (currentPlayer == 1) ? p1Size : p2Size;
+    for (int i = 0; i < size; i++) {
+        if (hand[i] == cardType) count++;
+    }
+    return (count >= 2);
 }
 
 void start_action() {
     srand(time(NULL));
     p1Size = 8;
-    p2Size = 8; 
+    p2Size = 8;
     
-    player1[0] = 1; // Atribuim DEFUSE jucatorilor [cite: 185]
+    // Oferă fiecărui jucător un DEFUSE obligatoriu 
+    player1[0] = 1; 
     player2[0] = 1; 
+
+    // Umple restul mâinii cu cărți RANDOM (de la index 2 la 11)
+    for(int i = 1; i < 8; i++) {
+        player1[i] = (rand() % 10) + 2; // Sări peste EXPLODE (0) și DEFUSE (1)
+        player2[i] = (rand() % 10) + 2;
+    }
     
-    deckSize = 20; 
-    state = WAIT_COMMAND;
-    printf("Jocul a inceput! Player 1, este randul tau.\n");
+    // Inițializează pachetul de pe masă cu cărți diverse
+    deckSize = 30; 
+    for(int i = 0; i < deckSize; i++) {
+        deck[i] = (rand() % 11) + 1; // Fără bombe în pachetul inițial pentru test
+    }
+    
+    // Pune o singură bombă undeva la mijloc
+    deck[deckSize / 2] = 0; 
+
+    state = 1; // WAIT_COMMAND [cite: 144]
+    writeCardsToFile();
+    printf("Jocul a inceput! Verificati pl1.txt pentru noua lista de carti.\n");
 }
 
 void extract_card() {
@@ -107,45 +136,46 @@ void extract_card() {
     }
 
     int card = deck[--deckSize]; 
-    printf("Ai extras: %d\n", card);
+    printf("Player %d a extras o carte.\n", currentPlayer);
 
-    if (card == 0) { // 0 = EXPLODE [cite: 149]
-        if (playerHasCard(1)) { // 1 = DEFUSE [cite: 150]
-            printf("BUM! Dar ai avut DEFUSE. Pune bomba inapoi.\n"); 
+    if (card == 0) { // EXPLODE [cite: 149]
+        if (playerHasCard(1)) { // DEFUSE [cite: 150]
+            printf("BUM! Dar ai avut DEFUSE. Pune bomba inapoi (CHOOSE <pozitie>).\n"); 
             deleteCard(1); 
-            state = WAIT_PLACEMENT;
+            state = WAIT_PLACEMENT; 
         } else {
-            printf("GAME OVER! Player %d a explodat.\n", currentPlayer); 
+            printf("GAME OVER! Player %d a explodat. Player %d castiga!\n", currentPlayer, (currentPlayer == 1) ? 2 : 1); 
             exit(0); 
         }
     } else {
+        /* Adaugam cartea in mana jucatorului */
+        if (currentPlayer == 1) player1[p1Size++] = card;
+        else player2[p2Size++] = card;
+
         nrofTurns--;
         if (nrofTurns <= 0) {
-            currentPlayer = (currentPlayer == 1) ? 2 : 1;
+            printf("Tura jucatorului %d s-a terminat.\n", currentPlayer); 
+            currentPlayer = (currentPlayer == 1) ? 2 : 1; 
             nrofTurns = 1;
         }
     }
+    writeCardsToFile(); 
 }
 
 void writeCardsToFile() {
     FILE *f1 = fopen("pl1.txt", "w");
     FILE *f2 = fopen("pl2.txt", "w");
     
-    if (f1 == NULL || f2 == NULL) {
-        printf("Eroare la deschiderea fisierelor de carti!\n");
-        return;
-    }
+    if (f1 == NULL || f2 == NULL) return;
 
-    // Scriem cartile pentru Player 1
     fprintf(f1, "Cartile tale (Player 1):\n");
     for (int i = 0; i < p1Size; i++) {
-        fprintf(f1, "%d ", player1[i]); // Poti inlocui %d cu numele cartii dintr-un array de string-uri
+        fprintf(f1, "- %s\n", cardNames[player1[i]]);
     }
 
-    // Scriem cartile pentru Player 2
     fprintf(f2, "Cartile tale (Player 2):\n");
     for (int i = 0; i < p2Size; i++) {
-        fprintf(f2, "%d ", player2[i]);
+        fprintf(f2, "- %s\n", cardNames[player2[i]]);
     }
 
     fclose(f1);
@@ -156,10 +186,11 @@ void futureFile() {
     FILE *f = fopen("future.txt", "w");
     if (f == NULL) return;
 
-    fprintf(f, "Viitorul pachetului:\n");
+    fprintf(f, "Top 3 carti din pachet:\n"); 
     for (int i = 1; i <= 3 && (deckSize - i) >= 0; i++) {
-        fprintf(f, "%d. Cartea cu ID: %d\n", i, deck[deckSize - i]);
+        fprintf(f, "%d. %s\n", i, cardNames[deck[deckSize - i]]); 
     }
     
     fclose(f);
+    printf("Te poti uita in viitor (future.txt). Scrie DONE cand termini.\n"); 
 }

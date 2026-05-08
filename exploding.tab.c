@@ -77,10 +77,13 @@ int yylex();
 
 /* Importăm variabilele și funcțiile din partea de C (Persoana 1) [cite: 144, 165] */
 extern int currentPlayer, nrofTurns, state;
+extern char *cardNames[];
 extern void start_action();
 extern void extract_card();
 extern int playerHasCard(int cardType);
 extern void deleteCard(int cardType);
+extern int playerHasTwoCards(int cardType);
+extern void futureFile();
 
 /* Definirea indexului pentru fiecare tip de carte conform cerintei [cite: 145] */
 #define C_DEFUSE 1
@@ -90,7 +93,7 @@ extern void deleteCard(int cardType);
 #define C_SHUFFLE 5
 #define C_SEE_FUTURE 6
 
-#line 94 "exploding.tab.c"
+#line 97 "exploding.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -148,8 +151,9 @@ enum yysymbol_kind_t
   YYSYMBOL_linie = 27,                     /* linie  */
   YYSYMBOL_comanda_start = 28,             /* comanda_start  */
   YYSYMBOL_actiune_joc = 29,               /* actiune_joc  */
-  YYSYMBOL_carte_speciala = 30,            /* carte_speciala  */
-  YYSYMBOL_gestionare_bomba = 31           /* gestionare_bomba  */
+  YYSYMBOL_tip_pisica = 30,                /* tip_pisica  */
+  YYSYMBOL_carte_speciala = 31,            /* carte_speciala  */
+  YYSYMBOL_gestionare_bomba = 32           /* gestionare_bomba  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -477,16 +481,16 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   12
+#define YYLAST   23
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  25
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  7
+#define YYNNTS  8
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  14
+#define YYNRULES  23
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  17
+#define YYNSTATES  27
 
 /* YYMAXUTOK -- Last valid token kind.  */
 #define YYMAXUTOK   279
@@ -535,10 +539,11 @@ static const yytype_int8 yytranslate[] =
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_int8 yyrline[] =
+static const yytype_uint8 yyrline[] =
 {
-       0,    31,    31,    32,    36,    37,    38,    42,    48,    54,
-      60,    68,    74,    84,    87
+       0,    34,    34,    35,    39,    40,    41,    45,    51,    52,
+      58,    61,    74,    75,    76,    77,    78,    82,    90,   103,
+     109,   119,   129,   140
 };
 #endif
 
@@ -559,7 +564,7 @@ static const char *const yytname[] =
   "FAVOR", "SHUFFLE", "SEE_FUTURE", "TACO_CAT", "POTATO_CAT",
   "RAINBOW_CAT", "BEARD_CAT", "CATTERMELON", "TOP", "MIDDLE", "BOTTOM",
   "NUMBER", "$accept", "joc", "linie", "comanda_start", "actiune_joc",
-  "carte_speciala", "gestionare_bomba", YY_NULLPTR
+  "tip_pisica", "carte_speciala", "gestionare_bomba", YY_NULLPTR
 };
 
 static const char *
@@ -569,7 +574,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-24)
+#define YYPACT_NINF (-14)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -583,8 +588,9 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-     -24,     0,   -24,   -24,   -24,   -24,   -23,    -3,   -24,   -24,
-     -24,   -24,   -24,   -24,   -24,   -24,   -24
+     -14,    10,   -14,   -14,   -14,   -14,   -13,   -11,     3,   -14,
+     -14,   -14,   -14,   -14,   -14,   -14,   -14,   -14,   -14,   -14,
+     -14,   -14,   -14,   -14,   -14,   -14,   -14
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -592,20 +598,21 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       2,     0,     1,     7,     9,    13,     0,     0,     3,     4,
-       5,     6,    14,    10,    11,    12,     8
+       2,     0,     1,     7,    10,    22,     0,     0,     0,     3,
+       4,     5,     6,    23,    17,    18,    21,    19,    20,    12,
+      13,    14,    15,    16,     9,     8,    11
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -24,   -24,   -24,   -24,   -24,   -24,   -24
+     -14,   -14,   -14,   -14,   -14,     4,   -14,   -14
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     1,     8,     9,    10,    16,    11
+       0,     1,     9,    10,    11,    24,    25,    12
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -613,36 +620,41 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-       2,    12,     0,     3,     4,     5,     6,     7,    13,     0,
-       0,    14,    15
+      14,    15,    16,    17,    18,    19,    20,    21,    22,    23,
+       2,    13,    26,     3,     4,     5,     6,     7,     8,    19,
+      20,    21,    22,    23
 };
 
 static const yytype_int8 yycheck[] =
 {
-       0,    24,    -1,     3,     4,     5,     6,     7,    11,    -1,
-      -1,    14,    15
+      11,    12,    13,    14,    15,    16,    17,    18,    19,    20,
+       0,    24,     8,     3,     4,     5,     6,     7,     8,    16,
+      17,    18,    19,    20
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,    26,     0,     3,     4,     5,     6,     7,    27,    28,
-      29,    31,    24,    11,    14,    15,    30
+       0,    26,     0,     3,     4,     5,     6,     7,     8,    27,
+      28,    29,    32,    24,    11,    12,    13,    14,    15,    16,
+      17,    18,    19,    20,    30,    31,    30
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
        0,    25,    26,    26,    27,    27,    27,    28,    29,    29,
-      30,    30,    30,    31,    31
+      29,    29,    30,    30,    30,    30,    30,    31,    31,    31,
+      31,    31,    32,    32
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     0,     2,     1,     1,     1,     1,     2,     1,
-       1,     1,     1,     1,     2
+       0,     2,     0,     2,     1,     1,     1,     1,     2,     2,
+       1,     2,     1,     1,     1,     1,     1,     1,     1,     1,
+       1,     1,     1,     2
 };
 
 
@@ -1106,34 +1118,79 @@ yyreduce:
   switch (yyn)
     {
   case 7: /* comanda_start: START  */
-#line 42 "exploding.y"
+#line 45 "exploding.y"
           { 
         if (state == 0) start_action(); // Seteaza starea la WAIT_COMMAND [cite: 144, 188]
     }
-#line 1114 "exploding.tab.c"
+#line 1126 "exploding.tab.c"
     break;
 
-  case 8: /* actiune_joc: PLAY carte_speciala  */
-#line 48 "exploding.y"
-                        {
-        if (state == 1) { // WAIT_COMMAND [cite: 144]
-            /* Aici se apeleaza logica de joc pentru fiecare carte [cite: 196] */
-            printf("Jucatorul %d a jucat o carte.\n", currentPlayer);
+  case 9: /* actiune_joc: PLAY tip_pisica  */
+#line 52 "exploding.y"
+                      {
+        /* Permitem PLAY CATTERMELON, dar de obicei pisicile nu fac nimic singure */
+        if (playerHasCard(yyvsp[0])) {
+            printf("Chatbot: Ai jucat %s, dar nu are niciun efect singura. Ai nevoie de o pereche!\n", cardNames[yyvsp[0]]);
         }
     }
-#line 1125 "exploding.tab.c"
+#line 1137 "exploding.tab.c"
     break;
 
-  case 9: /* actiune_joc: EXTRACT  */
-#line 54 "exploding.y"
+  case 10: /* actiune_joc: EXTRACT  */
+#line 58 "exploding.y"
               {
         if (state == 1) extract_card(); // Trage o carte si verifica daca e bomba [cite: 52, 61]
     }
-#line 1133 "exploding.tab.c"
+#line 1145 "exploding.tab.c"
     break;
 
-  case 10: /* carte_speciala: ATTACK  */
-#line 60 "exploding.y"
+  case 11: /* actiune_joc: PAIR tip_pisica  */
+#line 61 "exploding.y"
+                      {
+        /* Verificăm dacă are cel puțin 2 cărți de același fel */
+        if (playerHasTwoCards(yyvsp[0])) { 
+            deleteCard(yyvsp[0]);
+            deleteCard(yyvsp[0]);
+            printf("Chatbot: Ai jucat o PERECHE de %s! Poti fura o carte.\n", cardNames[yyvsp[0]]);
+        } else {
+            printf("Chatbot: Nu ai doua carti de acest fel pentru a forma o pereche!\n");
+        }
+    }
+#line 1160 "exploding.tab.c"
+    break;
+
+  case 12: /* tip_pisica: TACO_CAT  */
+#line 74 "exploding.y"
+             { yyval = 7; }
+#line 1166 "exploding.tab.c"
+    break;
+
+  case 13: /* tip_pisica: POTATO_CAT  */
+#line 75 "exploding.y"
+                 { yyval = 8; }
+#line 1172 "exploding.tab.c"
+    break;
+
+  case 14: /* tip_pisica: RAINBOW_CAT  */
+#line 76 "exploding.y"
+                  { yyval = 9; }
+#line 1178 "exploding.tab.c"
+    break;
+
+  case 15: /* tip_pisica: BEARD_CAT  */
+#line 77 "exploding.y"
+                { yyval = 10; }
+#line 1184 "exploding.tab.c"
+    break;
+
+  case 16: /* tip_pisica: CATTERMELON  */
+#line 78 "exploding.y"
+                  { yyval = 11; }
+#line 1190 "exploding.tab.c"
+    break;
+
+  case 17: /* carte_speciala: ATTACK  */
+#line 82 "exploding.y"
            { 
         if (playerHasCard(C_ATTACK)) {
             deleteCard(C_ATTACK);
@@ -1142,53 +1199,94 @@ yyreduce:
             printf("Atac! Jucatorul %d are 2 ture.\n", currentPlayer);
         }
     }
-#line 1146 "exploding.tab.c"
+#line 1203 "exploding.tab.c"
     break;
 
-  case 11: /* carte_speciala: SHUFFLE  */
-#line 68 "exploding.y"
+  case 18: /* carte_speciala: SKIP  */
+#line 90 "exploding.y"
+           {
+        if (playerHasCard(3)) { 
+            deleteCard(3); 
+            nrofTurns--; 
+            if (nrofTurns <= 0) {
+                currentPlayer = (currentPlayer == 1) ? 2 : 1;
+                nrofTurns = 1;
+            }
+            printf("Chatbot: Ai folosit SKIP. Randul tau s-a terminat.\n");
+        } else {
+            printf("Chatbot: Nu ai cartea SKIP in mana!\n");
+        }
+    }
+#line 1221 "exploding.tab.c"
+    break;
+
+  case 19: /* carte_speciala: SHUFFLE  */
+#line 103 "exploding.y"
               {
         if (playerHasCard(C_SHUFFLE)) {
             deleteCard(C_SHUFFLE);
             printf("Pachetul a fost amestecat.\n"); // [cite: 28, 130]
         }
     }
-#line 1157 "exploding.tab.c"
+#line 1232 "exploding.tab.c"
     break;
 
-  case 12: /* carte_speciala: SEE_FUTURE  */
-#line 74 "exploding.y"
+  case 20: /* carte_speciala: SEE_FUTURE  */
+#line 109 "exploding.y"
                  {
         if (playerHasCard(C_SEE_FUTURE)) {
             deleteCard(C_SEE_FUTURE);
-            state = 2; // WAIT_DONE [cite: 144]
-            printf("Vizualizeaza viitorul in future.txt. Scrie DONE cand termini.\n"); // [cite: 107]
+            state = 2; // Trece în starea WAIT_DONE [cite: 144]
+            futureFile(); // <--- ACEASTA LINIE GENEREAZĂ FIȘIERUL!
+            printf("Player %d a folosit SEE FUTURE.\n", currentPlayer);
+        } else {
+            printf("Nu ai aceasta carte!\n");
         }
     }
-#line 1169 "exploding.tab.c"
+#line 1247 "exploding.tab.c"
     break;
 
-  case 13: /* gestionare_bomba: DONE  */
-#line 84 "exploding.y"
-         {
-        if (state == 2) state = 1; // Revine la comenzi dupa See Future [cite: 54, 109]
+  case 21: /* carte_speciala: FAVOR  */
+#line 119 "exploding.y"
+            {
+        if (playerHasCard(4)) {
+            deleteCard(4);
+            state = 3; // WAIT_GIVE (trebuie definit in enum)
+            printf("Chatbot: Player %d, alege ce carte sa dai (GIVE <nume_carte>).\n", (currentPlayer == 1) ? 2 : 1);
+        }
     }
-#line 1177 "exploding.tab.c"
+#line 1259 "exploding.tab.c"
     break;
 
-  case 14: /* gestionare_bomba: CHOOSE NUMBER  */
-#line 87 "exploding.y"
+  case 22: /* gestionare_bomba: DONE  */
+#line 129 "exploding.y"
+         {
+       if (state == 2) { // Dacă suntem în starea WAIT_DONE 
+            state = 1;    // Revenim la WAIT_COMMAND 
+            
+            /* Putem apela o funcție pentru a goli sau șterge fișierul  */
+            remove("future.txt"); 
+            
+            printf("Chatbot: Am inteles. Acum poti continua jocul (PLAY sau EXTRACT).\n");
+            printf("Player %d, look at your cards in file pl%d.txt and give a command\n", currentPlayer, currentPlayer);
+        }
+    }
+#line 1275 "exploding.tab.c"
+    break;
+
+  case 23: /* gestionare_bomba: CHOOSE NUMBER  */
+#line 140 "exploding.y"
                     {
         if (state == 4) { // WAIT_PLACEMENT (dupa Defuse) [cite: 144, 226]
             printf("Bomba a fost plasata la pozitia %d. Jocul continua.\n", yyvsp[0]);
             state = 1; // Inapoi la joc normal [cite: 54]
         }
     }
-#line 1188 "exploding.tab.c"
+#line 1286 "exploding.tab.c"
     break;
 
 
-#line 1192 "exploding.tab.c"
+#line 1290 "exploding.tab.c"
 
       default: break;
     }
@@ -1381,7 +1479,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 95 "exploding.y"
+#line 148 "exploding.y"
 
 
 /* Implementarea functiei de eroare obligatorie [cite: 187] */
